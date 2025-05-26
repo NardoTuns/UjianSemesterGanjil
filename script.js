@@ -137,7 +137,7 @@ function selesaiKuis() {
 // Fungsi untuk menyimpan data ke Google Spreadsheet
 function simpanKeSpreadsheet(nama, kelas, skor) {
     // URL Web Apps dari Google Apps Script
-    const scriptUrl = 'URL_APPS_SCRIPT_ANDA';
+    const scriptUrl = 'https://script.google.com/macros/s/AKfycbwRw-01nYXMTC5j54-zd2MoNC5-sqGAbRZOazugIVliEcAh5EYRu-wygg3dFDF6EeMH/exec';
     
     fetch(scriptUrl, {
         method: 'POST',
