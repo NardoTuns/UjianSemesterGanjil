@@ -1,13 +1,12 @@
 // Konfigurasi
 const PASSWORD = "123";
-const WAKTU_UJIAN = 30; // dalam menit, bisa diubah
+const WAKTU_UJIAN = 30; // menit
 
 // Variabel global
 let userData = {};
 let soalData = [];
-let jawabanUser = [];
 
-// Fungsi untuk memuat soal dari file
+// Fungsi memuat soal dari file
 async function muatSoal() {
     try {
         const response = await fetch('soal.txt');
@@ -19,49 +18,60 @@ async function muatSoal() {
     }
 }
 
-// Fungsi untuk parsing soal dari text
+// Parsing soal dari teks
 function parseSoal(text) {
     const soalArray = text.split('\n\n').filter(soal => soal.trim() !== '');
-    return soalArray.map(soalText => {
+    return soalArray.map((soalText, index) => {
         const lines = soalText.split('\n').filter(line => line.trim() !== '');
-        
-        const nomorSoal = lines[0].split('. ')[0];
-        const pertanyaan = lines[0].split('. ')[1];
-        
+        const nomor = index + 1;
+        const pertanyaan = lines[0].split('. ')[1] || lines[0];
         const opsi = {};
+        let kunci = '';
+        let gambar = null;
+
         for (let i = 1; i < lines.length; i++) {
-            if (lines[i].startsWith('a. ')) opsi.a = lines[i].substring(3);
-            else if (lines[i].startsWith('b. ')) opsi.b = lines[i].substring(3);
-            else if (lines[i].startsWith('c. ')) opsi.c = lines[i].substring(3);
-            else if (lines[i].startsWith('d. ')) opsi.d = lines[i].substring(3);
-            else if (lines[i].startsWith('Kunci: ')) opsi.kunci = lines[i].substring(7).trim();
-            else if (lines[i].startsWith('Gambar:')) {
-                const gambar = lines[i].substring(7).trim();
-                opsi.gambar = gambar !== '' ? gambar : null;
-            }
+            const line = lines[i];
+            if (line.startsWith('a. ')) opsi.a = line.substring(3);
+            else if (line.startsWith('b. ')) opsi.b = line.substring(3);
+            else if (line.startsWith('c. ')) opsi.c = line.substring(3);
+            else if (line.startsWith('d. ')) opsi.d = line.substring(3);
+            else if (line.startsWith('Kunci:')) kunci = line.substring(7).trim();
+            else if (line.startsWith('Gambar:')) gambar = line.substring(7).trim();
         }
-        
-        return {
-            nomor: nomorSoal,
-            pertanyaan: pertanyaan,
-            opsi: opsi,
-            kunci: opsi.kunci,
-            gambar: opsi.gambar || null
-        };
+
+        return { nomor, pertanyaan, opsi, kunci, gambar };
     });
 }
 
-// Fungsi untuk memulai timer
-function mulaiTimer(durasiMenit, display) {
-    let timer = durasiMenit * 60;
-    const interval = setInterval(function () {
-        const menit = Math.floor(timer / 60);
-        let detik = timer % 60;
-        
-        detik = detik < 10 ? "0" + detik : detik;
-        
-        display.textContent = menit + ":" + detik;
-        
+// Tampilkan soal ke halaman
+function tampilkanSoal(soalData) {
+    const container = document.getElementById('soalContainer');
+    container.innerHTML = '';
+
+    soalData.forEach((soal, index) => {
+        const soalDiv = document.createElement('div');
+        soalDiv.className = 'soal';
+        soalDiv.innerHTML = `
+            <h3>${soal.nomor}. ${soal.pertanyaan}</h3>
+            ${soal.gambar ? `<img src="gambar/${soal.gambar}" alt="Gambar soal">` : ''}
+            ${['a', 'b', 'c', 'd'].map(opt => `
+                <div class="opsi">
+                    <input type="radio" name="soal${index}" id="soal${index}${opt}" value="${opt}">
+                    <label for="soal${index}${opt}">${opt}. ${soal.opsi[opt]}</label>
+                </div>`).join('')}
+        `;
+        container.appendChild(soalDiv);
+    });
+}
+
+// Mulai timer ujian
+function mulaiTimer(menit, display) {
+    let timer = menit * 60;
+    const interval = setInterval(() => {
+        const m = Math.floor(timer / 60);
+        const d = timer % 60;
+        display.textContent = `${m}:${d < 10 ? '0' : ''}${d}`;
+
         if (--timer < 0) {
             clearInterval(interval);
             selesaiKuis();
@@ -69,104 +79,65 @@ function mulaiTimer(durasiMenit, display) {
     }, 1000);
 }
 
-// Fungsi untuk menampilkan soal
-function tampilkanSoal(soalData) {
-    const container = document.getElementById('soalContainer');
-    container.innerHTML = '';
-    
-    soalData.forEach((soal, index) => {
-        const soalElement = document.createElement('div');
-        soalElement.className = 'soal';
-        soalElement.innerHTML = `
-            <h3>${soal.nomor}. ${soal.pertanyaan}</h3>
-            ${soal.gambar ? `<img src="gambar/${soal.gambar}" alt="Gambar soal">` : ''}
-            <div class="opsi">
-                <input type="radio" name="soal${index}" id="soal${index}a" value="a">
-                <label for="soal${index}a">a. ${soal.opsi.a}</label>
-            </div>
-            <div class="opsi">
-                <input type="radio" name="soal${index}" id="soal${index}b" value="b">
-                <label for="soal${index}b">b. ${soal.opsi.b}</label>
-            </div>
-            <div class="opsi">
-                <input type="radio" name="soal${index}" id="soal${index}c" value="c">
-                <label for="soal${index}c">c. ${soal.opsi.c}</label>
-            </div>
-            <div class="opsi">
-                <input type="radio" name="soal${index}" id="soal${index}d" value="d">
-                <label for="soal${index}d">d. ${soal.opsi.d}</label>
-            </div>
-        `;
-        container.appendChild(soalElement);
-    });
-}
-
-// Fungsi untuk menghitung skor
+// Hitung skor akhir
 function hitungSkor() {
     let skor = 0;
-    const totalSoal = soalData.length;
-    
-    for (let i = 0; i < totalSoal; i++) {
-        const selectedOption = document.querySelector(`input[name="soal${i}"]:checked`);
-        if (selectedOption && selectedOption.value === soalData[i].kunci) {
+    soalData.forEach((soal, index) => {
+        const pilihan = document.querySelector(`input[name="soal${index}"]:checked`);
+        if (pilihan && pilihan.value === soal.kunci) {
             skor++;
         }
-    }
-    
+    });
     return skor;
 }
 
-// Fungsi ketika kuis selesai
+// Proses selesai kuis
 function selesaiKuis() {
     const skor = hitungSkor();
-    
-    // Simpan data ke Google Spreadsheet (menggunakan Apps Script)
     simpanKeSpreadsheet(userData.nama, userData.kelas, skor);
-    
-    // Simpan data di localStorage untuk halaman hasil
+
     localStorage.setItem('hasilKuis', JSON.stringify({
         nama: userData.nama,
         kelas: userData.kelas,
         skor: skor
     }));
-    
-    // Redirect ke halaman hasil
+
     window.location.href = 'hasil.html';
 }
 
-// Fungsi untuk menyimpan data ke Google Spreadsheet
+// Simpan ke Google Spreadsheet via Apps Script
 function simpanKeSpreadsheet(nama, kelas, skor) {
-    // URL Web Apps dari Google Apps Script
-    const scriptUrl = 'https://script.google.com/macros/s/AKfycbwRw-01nYXMTC5j54-zd2MoNC5-sqGAbRZOazugIVliEcAh5EYRu-wygg3dFDF6EeMH/exec';
-    
-    fetch(scriptUrl, {
+    const url = 'https://script.google.com/macros/s/AKfycbwRw-01nYXMTC5j54-zd2MoNC5-sqGAbRZOazugIVliEcAh5EYRu-wygg3dFDF6EeMH/exec';
+
+    fetch(url, {
         method: 'POST',
         mode: 'no-cors',
         headers: {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            nama: nama,
-            kelas: kelas,
-            skor: skor,
-            timestamp: new Date().toISOString()
+            nama, kelas, skor, timestamp: new Date().toISOString()
         })
-    }).catch(error => console.error('Error:', error));
+    }).catch(err => console.error('Gagal kirim:', err));
 }
 
-// Event ketika DOM sudah dimuat
-document.addEventListener('DOMContentLoaded', function() {
-    // Halaman login
+// Event setelah DOM dimuat
+document.addEventListener('DOMContentLoaded', () => {
+    // Halaman Login
     if (document.getElementById('loginForm')) {
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
+        document.getElementById('loginForm').addEventListener('submit', e => {
             e.preventDefault();
-            
-            const nama = document.getElementById('nama').value;
-            const kelas = document.getElementById('kelas').value;
+            const nama = document.getElementById('nama').value.trim();
+            const kelasRadio = document.querySelector('input[name="kelas"]:checked');
             const password = document.getElementById('password').value;
-            
+
+            if (!nama || !kelasRadio) {
+                alert('Nama dan kelas harus diisi!');
+                return;
+            }
+
             if (password === PASSWORD) {
-                userData = { nama, kelas };
+                userData = { nama, kelas: kelasRadio.value };
                 localStorage.setItem('userData', JSON.stringify(userData));
                 window.location.href = 'kuis.html';
             } else {
@@ -174,37 +145,34 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
-    // Halaman kuis
+
+    // Halaman Kuis
     if (document.getElementById('soalContainer')) {
-        const displayNama = document.getElementById('displayNama');
-        const displayKelas = document.getElementById('displayKelas');
-        const timerDisplay = document.getElementById('timer');
-        const submitBtn = document.getElementById('submitBtn');
-        
-        // Ambil data user
-        userData = JSON.parse(localStorage.getItem('userData'));
-        displayNama.textContent = userData.nama;
-        displayKelas.textContent = userData.kelas;
-        
-        // Muat soal dan tampilkan
-        muatSoal().then(soal => {
-            soalData = soal;
-            tampilkanSoal(soal);
+        userData = JSON.parse(localStorage.getItem('userData') || '{}');
+
+        if (!userData.nama || !userData.kelas) {
+            alert('Silakan login terlebih dahulu.');
+            window.location.href = 'index.html';
+            return;
+        }
+
+        document.getElementById('displayNama').textContent = userData.nama;
+        document.getElementById('displayKelas').textContent = userData.kelas;
+        mulaiTimer(WAKTU_UJIAN, document.getElementById('timer'));
+
+        muatSoal().then(data => {
+            soalData = data;
+            tampilkanSoal(data);
         });
-        
-        // Mulai timer
-        mulaiTimer(WAKTU_UJIAN, timerDisplay);
-        
-        // Event tombol selesai
-        submitBtn.addEventListener('click', selesaiKuis);
+
+        document.getElementById('submitBtn').addEventListener('click', selesaiKuis);
     }
-    
-    // Halaman hasil
+
+    // Halaman Hasil (jika ada)
     if (document.getElementById('hasilNama')) {
-        const hasil = JSON.parse(localStorage.getItem('hasilKuis'));
-        document.getElementById('hasilNama').textContent = hasil.nama;
-        document.getElementById('hasilKelas').textContent = hasil.kelas;
-        document.getElementById('skor').textContent = `${hasil.skor}`;
+        const hasil = JSON.parse(localStorage.getItem('hasilKuis') || '{}');
+        document.getElementById('hasilNama').textContent = hasil.nama || '-';
+        document.getElementById('hasilKelas').textContent = hasil.kelas || '-';
+        document.getElementById('skor').textContent = hasil.skor ?? '-';
     }
 });
