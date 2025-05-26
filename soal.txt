@@ -4,7 +4,7 @@ b. Bandung
 c. Surabaya
 d. Medan
 Kunci: a
-Gambar: planet.jpg
+Gambar: nomor1.png
 
 2. 2 + 2 = ?
 a. 1
