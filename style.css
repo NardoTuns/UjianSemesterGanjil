@@ -29,12 +29,38 @@ h1 {
     font-weight: bold;
 }
 
-.form-group input {
+.form-group input[type="text"],
+.form-group input[type="password"] {
     width: 100%;
     padding: 8px;
     border: 1px solid #ddd;
     border-radius: 4px;
     box-sizing: border-box;
+}
+
+/* Radio Button Styles */
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+}
+
+.radio-option input[type="radio"] {
+    margin: 0;
+    margin-right: 10px;
+    width: auto;
+}
+
+.radio-option label {
+    font-weight: normal;
+    margin-bottom: 0;
+    cursor: pointer;
 }
 
 button {
@@ -46,6 +72,7 @@ button {
     cursor: pointer;
     font-size: 16px;
     width: 100%;
+    transition: background-color 0.3s;
 }
 
 button:hover {
@@ -70,6 +97,7 @@ button:hover {
     max-width: 100%;
     height: auto;
     margin-top: 10px;
+    border-radius: 4px;
 }
 
 .opsi {
